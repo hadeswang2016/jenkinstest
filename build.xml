@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Oms" default="build">
+    <target name="build" depends="prepare,lint,composer,tar"/>
+
+    <target name="clean" unless="clean.done" description="Cleanup build artifacts">
+        <delete dir="${basedir}/build/api"/>
+        <delete dir="${basedir}/build/coverage"/>
+        <delete dir="${basedir}/build/logs"/>
+        <delete dir="${basedir}/build/pdepend"/>
+        <delete file="${basedir}/composer.lock"/>
+        <property name="clean.done" value="true"/>
+    </target>
+
+    <target name="prepare" unless="prepare.done" depends="clean" description="Prepare for build">
+        <mkdir dir="${basedir}/build/api"/>
+        <mkdir dir="${basedir}/build/coverage"/>
+        <mkdir dir="${basedir}/build/logs"/>
+        <mkdir dir="${basedir}/build/pdepend"/>
+        <property name="prepare.done" value="true"/>
+    </target>
+
+    <target name="lint"> 
+        <apply executable="php" failonerror="true" taskname="lint"> 
+            <arg value="-l"/> 
+ 
+            <fileset dir="${basedir}/application"> 
+                <include name="**/*.php"/> 
+                <modified/> 
+            </fileset> 
+        </apply> 
+    </target>
+
+    <target name="phploc" description="Measure project size using PHPLOC">
+        <exec executable="/usr/local/bin/phploc" taskname="phploc">
+            <arg value="--count-tests"/>
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+
+    <target name="phploc-ci" depends="prepare"
+            description="Measure project size using PHPLOC and log result in CSV and XML format">
+        <exec executable="/usr/local/bin/phploc" taskname="phploc">
+            <arg value="--count-tests"/>
+            <arg value="--log-csv"/>
+            <arg path="${basedir}/build/logs/phploc.csv"/>
+            <arg value="--log-xml"/>
+            <arg path="${basedir}/build/logs/phploc.xml"/>
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+
+    <target name="pdepend" depends="prepare" description="Calculate software metrics using PHP_Depend">
+        <exec executable="/usr/local/bin/pdepend" taskname="pdepend">
+            <arg value="--jdepend-xml=${basedir}/build/logs/jdepend.xml"/>
+            <arg value="--jdepend-chart=${basedir}/build/pdepend/dependencies.svg"/>
+            <arg value="--overview-pyramid=${basedir}/build/pdepend/overview-pyramid.svg"/>
+            <arg value="--ignore=${basedir}/entry,${basedir}/system,${basedir}/vendor"/>
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+    <target name="phpmd" description="Perform project mess detection using PHPMD and print result in text format">
+        <exec executable="/usr/local/bin/phpmd" taskname="phpmd">
+            <arg path="${basedir}/application"/>
+            <arg value="text"/>
+            <arg path="${basedir}/phpmd.xml"/>
+        </exec>
+    </target>
+
+    <target name="phpmd-ci" depends="prepare"
+            description="Perform project mess detection using PHPMD and log result in XML format">
+        <exec executable="/usr/local/bin/phpmd" taskname="phpmd">
+            <arg path="${basedir}/application"/>
+            <arg value="xml"/>
+            <arg path="${basedir}/phpmd.xml"/>
+            <arg value="--reportfile"/>
+            <arg path="${basedir}/build/logs/pmd.xml"/>
+        </exec>
+    </target>
+
+    <target name="phpcs"
+            description="Find coding standard violations using PHP_CodeSniffer and print result in text format">
+        <exec executable="/usr/local/bin/phpcs" taskname="phpcs">
+            <arg value="--standard=PSR2"/>
+            <arg value="--extensions=php"/>
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+
+    <target name="phpcs-ci" depends="prepare"
+            description="Find coding standard violations using PHP_CodeSniffer and log result in XML format">
+        <exec executable="/usr/local/bin/phpcs" output="/dev/null" taskname="phpcs">
+            <arg value="--report=checkstyle"/>
+            <arg value="--report-file=${basedir}/build/logs/checkstyle.xml"/>
+            <arg value="--standard=PSR2"/>
+            <arg value="--extensions=php"/>
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+
+    <target name="phpcpd" description="Find duplicate code using PHPCPD">
+        <exec executable="/usr/local/bin/phpcpd" taskname="phpcpd">
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+
+    <target name="phpcpd-ci" depends="prepare"
+            description="Find duplicate code using PHPCPD and log result in XML format">
+        <exec executable="/usr/local/bin/phpcpd" taskname="phpcpd">
+            <arg value="--log-pmd"/>
+            <arg path="${basedir}/build/logs/pmd-cpd.xml"/>
+            <arg path="${basedir}/application"/>
+        </exec>
+    </target>
+
+    <target name="composer" description="Installing dependencies" depends="prepare">
+        <exec executable="/usr/local/bin/composer" taskname="composer">
+            <arg value="install" />
+        </exec>
+    </target>
+
+    
+    <property name="sourcetarfile" value="${buildtag}.${buildts}.tar.gz" />
+    <fileset id="source.tar.gz" dir=".">
+        <include name="application/**"/>
+        <include name="entry/**"/>
+        <include name="system/**"/>
+        <include name="vendor/**"/>
+    </fileset>
+
+    <target name="tar" description="Create tar file">
+        <delete file="${sourcetarfile}" failonerror="false"/>
+        <tar destfile="dist/${sourcetarfile}" compression="gzip">
+            <fileset refid="source.tar.gz"/>
+        </tar>
+    </target> 
+
+</project>
