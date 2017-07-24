@@ -122,9 +122,9 @@
     <property name="sourcetarfile" value="${buildtag}.${buildts}.tar.gz" />
     <fileset id="source.tar.gz" dir=".">
         <include name="application/**"/>
-        <include name="entry/**"/>
         <include name="system/**"/>
         <include name="vendor/**"/>
+		<include name="index.php"/>
     </fileset>
 
     <target name="tar" description="Create tar file">
